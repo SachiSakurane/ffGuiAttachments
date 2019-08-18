@@ -5,51 +5,50 @@
 #pragma once
 
 #include <mutex>
+#include <utility>
 
 class ValueTreeButtonAttachment : public juce::Button::Listener,
                                   public juce::ValueTree::Listener
 {
 public:
     ValueTreeButtonAttachment (juce::ValueTree& tree,
-                               juce::Button* button,
                                juce::Identifier property,
+                               juce::Button& button,
                                juce::UndoManager* undo = nullptr)
         :   tree_ (tree),
-            property_ (property),
+            button_ (button),
+            property_ (std::move(property)),
             undo_ (undo)
     {
         // Don't attach an invalid valuetree!
         jassert (tree_.isValid());
-        button_ = button;
 
         if (tree_.hasProperty (property))
         {
-            button_->setToggleState (tree_.getProperty(property_), juce::NotificationType::dontSendNotification);
+            button_.setToggleState (tree_.getProperty(property_), juce::NotificationType::dontSendNotification);
         }
         else
         {
-            tree_.setProperty (property, button_->getToggleState(), undo_);
+            tree_.setProperty (property, button_.getToggleState(), undo_);
         }
 
         tree_.addListener (this);
-        button_->addListener (this);
+        button_.addListener (this);
     }
 
     ~ValueTreeButtonAttachment () override
     {
         tree_.removeListener (this);
-        if (button_) {
-            button_->removeListener (this);
-        }
+        button_.removeListener (this);
     }
 
     void buttonClicked (juce::Button *button) override
     {
         if (std::unique_lock lock{mutex_, std::try_to_lock}; lock)
         {
-            if (button_ == button)
+            if (&button_ == button)
             {
-                tree_.setProperty(property_, button_->getToggleState(), undo_);
+                tree_.setProperty(property_, button_.getToggleState(), undo_);
             }
         }
     }
@@ -58,20 +57,20 @@ public:
     {
         if (std::unique_lock lock{mutex_, std::try_to_lock}; lock)
         {
-            if (treeWhosePropertyHasChanged == tree_ && button_)
+            if (treeWhosePropertyHasChanged == tree_)
             {
                 if (changedProperty == property_)
                 {
-                    button_->setToggleState (tree_.getProperty(property_), juce::NotificationType::sendNotificationAsync);
+                    button_.setToggleState (tree_.getProperty(property_), juce::NotificationType::sendNotificationAsync);
                 }
             }
         }
     }
 
 private:
-    juce::ValueTree                             tree_;
-    juce::Component::SafePointer<juce::Button>  button_;
-    juce::Identifier                            property_;
-    juce::UndoManager*                          undo_ = nullptr;
-    std::mutex                                  mutex_;
+    juce::ValueTree&   tree_;
+    juce::Button&      button_;
+    juce::Identifier   property_;
+    juce::UndoManager* undo_;
+    std::mutex         mutex_;
 };
