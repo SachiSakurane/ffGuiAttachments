@@ -23,13 +23,13 @@ public:
         // Don't attach an invalid valuetree!
         jassert (tree_.isValid());
 
-        if (tree_.hasProperty (property))
+        if (tree_.hasProperty (property_))
         {
             button_.setToggleState (tree_.getProperty(property_), juce::NotificationType::dontSendNotification);
         }
         else
         {
-            tree_.setProperty (property, button_.getToggleState(), undo_);
+            tree_.setProperty (property_, button_.getToggleState(), undo_);
         }
 
         tree_.addListener (this);
