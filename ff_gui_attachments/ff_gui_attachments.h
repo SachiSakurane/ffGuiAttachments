@@ -109,4 +109,4 @@ namespace FF {
 #include "ValueTreeRadioButtonGroupAttachment.h"
 #include "ValueTreeLabelAttachment.h"
 #include "ValueTreeDebugListener.h"
-
+#include "ValueTreeButtonAttachment.h"
