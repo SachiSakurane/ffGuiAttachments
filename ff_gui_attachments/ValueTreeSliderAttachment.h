@@ -84,7 +84,7 @@ public:
         slider.addListener (this);
     }
 
-    ~ValueTreeSliderAttachment ()
+    ~ValueTreeSliderAttachment () override
     {
         tree.removeListener (this);
         slider.removeListener (this);
@@ -120,12 +120,6 @@ public:
             }
         }
     }
-    void valueTreeChildAdded (juce::ValueTree &parentTree, juce::ValueTree &childWhichHasBeenAdded) override {}
-    void valueTreeChildRemoved (juce::ValueTree &parentTree, juce::ValueTree &childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override {}
-    void valueTreeChildOrderChanged (juce::ValueTree &parentTreeWhoseChildrenHaveMoved, int oldIndex, int newIndex) override {}
-    void valueTreeParentChanged (juce::ValueTree &treeWhoseParentHasChanged) override {}
-    void valueTreeRedirected (juce::ValueTree &treeWhichHasBeenChanged) override {}
-
 
 private:
     juce::ValueTree&   tree;
