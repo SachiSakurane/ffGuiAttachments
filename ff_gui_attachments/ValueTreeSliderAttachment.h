@@ -44,6 +44,8 @@
 
 #pragma once
 
+#include <mutex>
+
 /**
  \class ValueTreeSliderAttachment
  \brief This class updates a Slider to a property in a ValueTree
@@ -74,14 +76,17 @@ public:
         jassert (tree.isValid());
         slider = _slider;
 
-        if (tree.hasProperty (propMinimum) && tree.hasProperty (propMaximum)) {
+        if (tree.hasProperty (propMinimum) && tree.hasProperty (propMaximum))
+        {
             slider->setRange (tree.getProperty (propMinimum), tree.getProperty (propMaximum), tree.getProperty (propInterval, 0));
         }
 
-        if (tree.hasProperty (property)) {
+        if (tree.hasProperty (property))
+        {
             slider->setValue (tree.getProperty(property));
         }
-        else {
+        else
+        {
             tree.setProperty (property, slider->getValue(), undoMgr);
         }
 
@@ -92,7 +97,8 @@ public:
     ~ValueTreeSliderAttachment ()
     {
         tree.removeListener (this);
-        if (slider) {
+        if (slider)
+        {
             slider->removeListener (this);
         }
     }
@@ -102,12 +108,12 @@ public:
      */
     void sliderValueChanged (juce::Slider *sliderThatChanged) override
     {
-        if (! updating) {
-            updating = true;
-            if (slider == sliderThatChanged) {
+        if (std::unique_lock lock{mutex_, std::try_to_lock}; lock)
+        {
+            if (slider == sliderThatChanged)
+            {
                 tree.setProperty (property, slider->getValue(), undoMgr);
             }
-            updating = false;
         }
     }
 
@@ -116,20 +122,22 @@ public:
      */
     void valueTreePropertyChanged (juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &changedProperty) override
     {
-        if (! updating) {
-            updating = true;
-            if (treeWhosePropertyHasChanged == tree && slider) {
-                if (changedProperty == property) {
+        if (std::unique_lock lock{mutex_, std::try_to_lock}; lock)
+        {
+            if (treeWhosePropertyHasChanged == tree && slider)
+            {
+                if (changedProperty == property)
+                {
                     slider->setValue (tree.getProperty (property));
                 }
-                else if (property == propMinimum || property == propMaximum || property == propInterval) {
-                    if (tree.hasProperty (propMinimum) && tree.hasProperty (propMaximum)) {
+                else if (property == propMinimum || property == propMaximum || property == propInterval)
+                {
+                    if (tree.hasProperty (propMinimum) && tree.hasProperty (propMaximum))
+                    {
                         slider->setRange (tree.getProperty (propMinimum), tree.getProperty (propMaximum), tree.getProperty (propInterval, 0));
                     }
                 }
             }
-
-            updating = false;
         }
     }
     void valueTreeChildAdded (juce::ValueTree &parentTree, juce::ValueTree &childWhichHasBeenAdded) override {}
@@ -147,5 +155,5 @@ private:
     juce::Identifier                            propMinimum;
     juce::Identifier                            propMaximum;
     juce::Identifier                            propInterval;
-    bool                                        updating = false;
+    std::mutex                                  mutex_;
 };

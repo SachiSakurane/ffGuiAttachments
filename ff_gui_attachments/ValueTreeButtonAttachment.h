@@ -5,7 +5,6 @@
 #pragma once
 
 #include <mutex>
-#include "../JuceLibraryCode/JuceHeader.h"
 
 class ValueTreeButtonAttachment : public juce::Button::Listener,
                                   public juce::ValueTree::Listener
@@ -23,10 +22,12 @@ public:
         jassert (tree_.isValid());
         button_ = button;
 
-        if (tree_.hasProperty (property)) {
+        if (tree_.hasProperty (property))
+        {
             button_->setToggleState (tree_.getProperty(property_), juce::NotificationType::dontSendNotification);
         }
-        else {
+        else
+        {
             tree_.setProperty (property, button_->getToggleState(), undo_);
         }
 
@@ -57,8 +58,10 @@ public:
     {
         if (std::unique_lock lock{mutex_, std::try_to_lock}; lock)
         {
-            if (treeWhosePropertyHasChanged == tree_ && button_) {
-                if (changedProperty == property_) {
+            if (treeWhosePropertyHasChanged == tree_ && button_)
+            {
+                if (changedProperty == property_)
+                {
                     button_->setToggleState (tree_.getProperty(property_), juce::NotificationType::sendNotificationAsync);
                 }
             }
