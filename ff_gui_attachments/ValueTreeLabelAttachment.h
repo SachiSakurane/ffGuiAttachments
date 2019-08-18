@@ -44,8 +44,6 @@
 
 #pragma once
 
-#include "../JuceLibraryCode/JuceHeader.h"
-
 /**
  \class ValueTreeLabelAttachment
  \brief Connects a Label to a ValueTree node to synchronise
