@@ -24,7 +24,7 @@ public:
         button_ = button;
 
         if (tree_.hasProperty (property)) {
-            button_->setToggleState (tree_.getProperty(property_), juce::NotificationType::sendNotificationAsync);
+            button_->setToggleState (tree_.getProperty(property_), juce::NotificationType::dontSendNotification);
         }
         else {
             tree_.setProperty (property, button_->getToggleState(), undo_);
@@ -44,20 +44,23 @@ public:
 
     void buttonClicked (juce::Button *button) override
     {
-        std::scoped_lock lock{mutex_};
-
-        if (button_ == button) {
-            tree_.setProperty (property_, button_->getToggleState(), undo_);
+        if (std::unique_lock lock{mutex_, std::try_to_lock}; lock)
+        {
+            if (button_ == button)
+            {
+                tree_.setProperty(property_, button_->getToggleState(), undo_);
+            }
         }
     }
 
     void valueTreePropertyChanged (juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &changedProperty) override
     {
-        std::scoped_lock lock{mutex_};
-
-        if (treeWhosePropertyHasChanged == tree_ && button_) {
-            if (changedProperty == property_) {
-                button_->setToggleState (tree_.getProperty(property_), juce::NotificationType::sendNotificationAsync);
+        if (std::unique_lock lock{mutex_, std::try_to_lock}; lock)
+        {
+            if (treeWhosePropertyHasChanged == tree_ && button_) {
+                if (changedProperty == property_) {
+                    button_->setToggleState (tree_.getProperty(property_), juce::NotificationType::sendNotificationAsync);
+                }
             }
         }
     }
