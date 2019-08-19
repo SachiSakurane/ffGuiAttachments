@@ -61,33 +61,33 @@ public:
     */
     ValueTreeSliderAttachment (juce::ValueTree& attachToTree,
                                juce::Identifier valueProperty,
-                               juce::Slider& _slider,
+                               juce::Slider& slider,
                                juce::UndoManager* undoManagerToUse = nullptr)
-    :   tree     (attachToTree),
-        slider   (_slider),
-        property (std::move(valueProperty)),
-        undoMgr  (undoManagerToUse)
+    : tree_     (attachToTree),
+      slider_   (slider),
+      property_ (std::move(valueProperty)),
+      undo_  (undoManagerToUse)
     {
         // Don't attach an invalid valuetree!
-        jassert (tree.isValid());
+        jassert (tree_.isValid());
 
-        if (tree.hasProperty (property))
+        if (tree_.hasProperty (property_))
         {
-            slider.setValue (tree.getProperty(property));
+            slider_.setValue (tree_.getProperty(property_));
         }
         else
         {
-            tree.setProperty (property, slider.getValue(), undoMgr);
+            tree_.setProperty (property_, slider_.getValue(), undo_);
         }
 
-        tree.addListener (this);
-        slider.addListener (this);
+        tree_.addListener (this);
+        slider_.addListener (this);
     }
 
     ~ValueTreeSliderAttachment () override
     {
-        tree.removeListener (this);
-        slider.removeListener (this);
+        tree_.removeListener (this);
+        slider_.removeListener (this);
     }
 
     /**
@@ -97,9 +97,9 @@ public:
     {
         if (std::unique_lock lock{mutex_, std::try_to_lock}; lock)
         {
-            if (&slider == sliderThatChanged)
+            if (&slider_ == sliderThatChanged)
             {
-                tree.setProperty (property, slider.getValue(), undoMgr);
+                tree_.setProperty (property_, slider_.getValue(), undo_);
             }
         }
     }
@@ -111,20 +111,20 @@ public:
     {
         if (std::unique_lock lock{mutex_, std::try_to_lock}; lock)
         {
-            if (treeWhosePropertyHasChanged == tree)
+            if (treeWhosePropertyHasChanged == tree_)
             {
-                if (changedProperty == property)
+                if (changedProperty == property_)
                 {
-                    slider.setValue (tree.getProperty (property));
+                    slider_.setValue (tree_.getProperty (property_));
                 }
             }
         }
     }
 
 private:
-    juce::ValueTree&   tree;
-    juce::Slider&      slider;
-    juce::Identifier   property;
-    juce::UndoManager* undoMgr;
+    juce::ValueTree&   tree_;
+    juce::Slider&      slider_;
+    juce::Identifier   property_;
+    juce::UndoManager* undo_;
     std::mutex         mutex_;
 };
