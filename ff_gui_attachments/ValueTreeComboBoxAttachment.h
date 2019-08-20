@@ -1,3 +1,5 @@
+#include <utility>
+
 /*
  ==============================================================================
 
@@ -45,6 +47,8 @@
 
 #pragma once
 
+#include <mutex>
+#include <utility>
 
 //==============================================================================
 /**
@@ -69,50 +73,48 @@ public:
      The selected child node will get the property "selected" == 1.
      */
     ValueTreeComboBoxAttachment (juce::ValueTree& attachToTree,
-                                 juce::ComboBox* comboBoxToAttach,
                                  juce::Identifier indexProperty,
-                                 bool shouldSelectSubNodes,
-                                 juce::UndoManager* undoManagerToUse = nullptr)
+                                 juce::ComboBox& comboBoxToAttach,
+                                 juce::UndoManager* undoManagerToUse = nullptr,
+                                 bool shouldSelectSubNodes = false)
     :   tree (attachToTree),
-        property (indexProperty),
+        comboBox (comboBoxToAttach),
+        property (std::move(indexProperty)),
         selectSubNodes (shouldSelectSubNodes),
         undoMgr (undoManagerToUse)
     {
         // Don't attach an invalid valuetree!
         jassert (tree.isValid());
-        comboBox = comboBoxToAttach;
 
         if (selectSubNodes) {
             updateChoices ();
         }
         else {
             if (tree.hasProperty (property)) {
-                comboBox->setSelectedItemIndex (tree.getProperty(property));
+                comboBox.setSelectedItemIndex (tree.getProperty(property));
             }
             else {
-                tree.setProperty (property, comboBox->getSelectedItemIndex(), undoMgr);
+                tree.setProperty (property, comboBox.getSelectedItemIndex(), undoMgr);
             }
         }
         tree.addListener (this);
-        comboBox->addListener (this);
+        comboBox.addListener (this);
     }
 
-    ~ValueTreeComboBoxAttachment ()
+    ~ValueTreeComboBoxAttachment () override
     {
         tree.removeListener (this);
-        if (comboBox) {
-            comboBox->removeListener (this);
-        }
+        comboBox.removeListener (this);
     }
 
     /** Updates the ValueTree's property if the ComboBox has changed */
     void comboBoxChanged (juce::ComboBox *comboBoxThatHasChanged) override
     {
-        if (! updating) {
-            updating = true;
-            if (comboBox == comboBoxThatHasChanged) {
+        if (std::unique_lock lock{mutex_, std::try_to_lock}; lock)
+        {
+            if (&comboBox == comboBoxThatHasChanged) {
                 if (selectSubNodes) {
-                    const int idx = comboBox->getSelectedItemIndex ();
+                    const int idx = comboBox.getSelectedItemIndex ();
                     for (int i=0; i < tree.getNumChildren(); ++i) {
                         if (i == idx) {
                             tree.getChild (i).setProperty (FF::propSelected, 1, undoMgr);
@@ -123,18 +125,17 @@ public:
                     }
                 }
                 else {
-                    tree.setProperty (property, comboBox->getSelectedItemIndex (), undoMgr);
+                    tree.setProperty (property, comboBox.getSelectedItemIndex (), undoMgr);
                 }
             }
-            updating = false;
         }
     }
 
     /** Updates the ComboBox property if the ValueTree has changed */
     void valueTreePropertyChanged (juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &changedProperty) override
     {
-        if (! updating) {
-            updating = true;
+        if (std::unique_lock lock{mutex_, std::try_to_lock}; lock)
+        {
             if (selectSubNodes) {
                 if (treeWhosePropertyHasChanged.getParent() == tree) {
                     if (changedProperty == property) {
@@ -145,21 +146,20 @@ public:
                             if (tree.getChild (i).hasProperty (FF::propSelected)
                                 && static_cast<int> (tree.getChild (i).getProperty (FF::propSelected)) > 0)
                             {
-                                comboBox->setSelectedItemIndex (i);
+                                comboBox.setSelectedItemIndex (i);
                             }
                         }
                     }
                 }
             }
             else {
-                if (treeWhosePropertyHasChanged == tree && changedProperty == property && comboBox) {
+                if (treeWhosePropertyHasChanged == tree && changedProperty == property) {
                     if (tree.hasProperty (property)) {
                         const int idx = tree.getProperty (property);
-                        comboBox->setSelectedItemIndex (idx);
+                        comboBox.setSelectedItemIndex (idx);
                     }
                 }
             }
-            updating = false;
         }
     }
     
@@ -177,10 +177,6 @@ public:
             updateChoices ();
         }
     }
-    void valueTreeChildOrderChanged (juce::ValueTree &parentTreeWhoseChildrenHaveMoved, int oldIndex, int newIndex) override {}
-    void valueTreeParentChanged (juce::ValueTree &treeWhoseParentHasChanged) override {}
-    void valueTreeRedirected (juce::ValueTree &treeWhichHasBeenChanged) override {}
-
 
 private:
 
@@ -189,20 +185,20 @@ private:
      */
     void updateChoices ()
     {
-        comboBox->clear();
+        comboBox.clear();
         for (int i=0; i < tree.getNumChildren(); ++i) {
             juce::ValueTree child = tree.getChild (i);
-            comboBox->addItem (child.getProperty (property, child.getType().toString()), 100 + i);
+            comboBox.addItem (child.getProperty (property, child.getType().toString()), 100 + i);
             if (child.hasProperty (FF::propSelected) && static_cast<int> (child.getProperty (FF::propSelected)) != 0) {
-                comboBox->setSelectedId (100+i);
+                comboBox.setSelectedId (100+i);
             }
         }
     }
 
-    juce::ValueTree                                 tree;
-    juce::Component::SafePointer<juce::ComboBox>    comboBox;
-    juce::Identifier                                property;
-    bool                                            selectSubNodes;
-    juce::UndoManager*                              undoMgr  = nullptr;
-    bool                                            updating = false;
+    juce::ValueTree&   tree;
+    juce::ComboBox&    comboBox;
+    juce::Identifier   property;
+    bool               selectSubNodes;
+    juce::UndoManager* undoMgr  = nullptr;
+    std::mutex         mutex_;
 };
