@@ -44,48 +44,48 @@
 
 #pragma once
 
+#include <mutex>
+#include <utility>
+
 /**
  \class ValueTreeLabelAttachment
  \brief Connects a Label to a ValueTree node to synchronise
  */
 class ValueTreeLabelAttachment : public juce::Label::Listener,
-                                public juce::ValueTree::Listener
+                                 public juce::ValueTree::Listener
 {
 public:
     /**
      Creates an attachment to synchronise a Label to a ValueTree node.
      You can set a \param property, in which the text the label is showing is stored
      */
-    ValueTreeLabelAttachment (juce::ValueTree& attachToTree,
-                               juce::Label* attachToLabel,
-                               juce::Identifier textProperty,
-                               juce::UndoManager* undoManagerToUse = nullptr)
-    :   tree (attachToTree),
-        property (textProperty),
-        undoMgr (undoManagerToUse),
-        updating (false)
+    ValueTreeLabelAttachment (juce::ValueTree& tree,
+                              juce::Identifier property,
+                              juce::Label& label,
+                              juce::UndoManager* undo = nullptr)
+    :   tree (tree),
+        label (label),
+        property (std::move(property)),
+        undoMgr (undo)
     {
         // Don't attach an invalid valuetree!
         jassert (tree.isValid());
-        label = attachToLabel;
 
         if (tree.hasProperty (property)) {
-            label->setText (tree.getProperty(property), juce::dontSendNotification);
+            label.setText (tree.getProperty(property), juce::dontSendNotification);
         }
         else {
-            tree.setProperty (property, label->getText(), undoMgr);
+            tree.setProperty (property, label.getText(), undoMgr);
         }
 
         tree.addListener (this);
-        label->addListener (this);
+        label.addListener (this);
     }
 
-    ~ValueTreeLabelAttachment ()
+    ~ValueTreeLabelAttachment () override
     {
         tree.removeListener (this);
-        if (label) {
-            label->removeListener (this);
-        }
+        label.removeListener (this);
     }
 
     /**
@@ -93,12 +93,9 @@ public:
      */
     void labelTextChanged (juce::Label *_label) override
     {
-        if (! updating) {
-            updating = true;
-            if (label == _label) {
-                tree.setProperty (property, label->getText(), undoMgr);
-            }
-            updating = false;
+        if (std::unique_lock lock{mutex_, std::try_to_lock}; lock && &label == _label)
+        {
+            tree.setProperty (property, label.getText(), undoMgr);
         }
     }
 
@@ -107,29 +104,21 @@ public:
      */
     void valueTreePropertyChanged (juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &_property) override
     {
-        if (! updating) {
-            updating = true;
-            if (treeWhosePropertyHasChanged == tree && label) {
+        if (std::unique_lock lock{mutex_, std::try_to_lock}; lock)
+        {
+            if (treeWhosePropertyHasChanged == tree) {
                 if (_property == property) {
-                    label->setText(tree.getProperty (property), juce::dontSendNotification);
+                    label.setText(tree.getProperty (property), juce::dontSendNotification);
                 }
             }
-
-            updating = false;
         }
     }
-    
-    void valueTreeChildAdded (juce::ValueTree &parentTree, juce::ValueTree &childWhichHasBeenAdded) override {}
-    void valueTreeChildRemoved (juce::ValueTree &parentTree, juce::ValueTree &childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override {}
-    void valueTreeChildOrderChanged (juce::ValueTree &parentTreeWhoseChildrenHaveMoved, int oldIndex, int newIndex) override {}
-    void valueTreeParentChanged (juce::ValueTree &treeWhoseParentHasChanged) override {}
-    void valueTreeRedirected (juce::ValueTree &treeWhichHasBeenChanged) override {}
 
 private:
-    juce::ValueTree                             tree;
-    juce::Component::SafePointer<juce::Label>   label;
-    juce::Identifier                            property;
-    juce::UndoManager*                          undoMgr  = nullptr;
-    bool                                        updating = false;
+    juce::ValueTree&   tree;
+    juce::Label&       label;
+    juce::Identifier   property;
+    juce::UndoManager* undoMgr  = nullptr;
+    std::mutex         mutex_;
 };
 
