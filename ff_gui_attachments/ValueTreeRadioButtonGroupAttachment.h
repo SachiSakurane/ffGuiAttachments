@@ -63,7 +63,7 @@ public:
      If you set \param selectSubNodes, the selected child node corresponding to
      the Button with the same ComponentID will get the property "selected" == 1.
      */
-    ValueTreeRadioButtonGroupAttachment (juce::ValueTree& attachToTree,
+    ValueTreeRadioButtonGroupAttachment (const juce::ValueTree& attachToTree,
                                          juce::Array<juce::Button*>& _buttons,
                                          juce::Identifier indexProperty,
                                          bool shouldSelectSubNodes,

@@ -59,7 +59,7 @@ public:
      Creates a ValueTreeSliderAttachment. The Slider gets it's values from properties of the ValueTree node.
      You can specify the names of the corresponding properties here.
     */
-    ValueTreeSliderAttachment (juce::ValueTree& attachToTree,
+    ValueTreeSliderAttachment (const juce::ValueTree& attachToTree,
                                juce::Identifier valueProperty,
                                juce::Slider& slider,
                                juce::UndoManager* undoManagerToUse = nullptr)
@@ -122,7 +122,7 @@ public:
     }
 
 private:
-    juce::ValueTree&   tree_;
+    juce::ValueTree    tree_;
     juce::Slider&      slider_;
     juce::Identifier   property_;
     juce::UndoManager* undo_;

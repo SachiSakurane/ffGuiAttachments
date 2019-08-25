@@ -11,7 +11,7 @@ class ValueTreeButtonAttachment : public juce::Button::Listener,
                                   public juce::ValueTree::Listener
 {
 public:
-    ValueTreeButtonAttachment (juce::ValueTree& tree,
+    ValueTreeButtonAttachment (const juce::ValueTree& tree,
                                juce::Identifier property,
                                juce::Button& button,
                                juce::UndoManager* undo = nullptr)
@@ -68,7 +68,7 @@ public:
     }
 
 private:
-    juce::ValueTree&   tree_;
+    juce::ValueTree    tree_;
     juce::Button&      button_;
     juce::Identifier   property_;
     juce::UndoManager* undo_;

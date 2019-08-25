@@ -59,14 +59,14 @@ public:
      Creates an attachment to synchronise a Label to a ValueTree node.
      You can set a \param property, in which the text the label is showing is stored
      */
-    ValueTreeLabelAttachment (juce::ValueTree& tree,
+    ValueTreeLabelAttachment (const juce::ValueTree& tree,
                               juce::Identifier property,
                               juce::Label& label,
                               juce::UndoManager* undo = nullptr)
-    :   tree (tree),
-        label (label),
-        property (std::move(property)),
-        undoMgr (undo)
+    : tree_ (tree),
+      label (label),
+      property (std::move(property)),
+      undoMgr (undo)
     {
         // Don't attach an invalid valuetree!
         jassert (tree.isValid());
@@ -75,16 +75,16 @@ public:
             label.setText (tree.getProperty(property), juce::dontSendNotification);
         }
         else {
-            tree.setProperty (property, label.getText(), undoMgr);
+            tree_.setProperty (property, label.getText(), undoMgr);
         }
 
-        tree.addListener (this);
+        tree_.addListener (this);
         label.addListener (this);
     }
 
     ~ValueTreeLabelAttachment () override
     {
-        tree.removeListener (this);
+        tree_.removeListener (this);
         label.removeListener (this);
     }
 
@@ -95,7 +95,7 @@ public:
     {
         if (std::unique_lock lock{mutex_, std::try_to_lock}; lock && &label == _label)
         {
-            tree.setProperty (property, label.getText(), undoMgr);
+            tree_.setProperty (property, label.getText(), undoMgr);
         }
     }
 
@@ -106,16 +106,16 @@ public:
     {
         if (std::unique_lock lock{mutex_, std::try_to_lock}; lock)
         {
-            if (treeWhosePropertyHasChanged == tree) {
+            if (treeWhosePropertyHasChanged == tree_) {
                 if (_property == property) {
-                    label.setText(tree.getProperty (property), juce::dontSendNotification);
+                    label.setText(tree_.getProperty (property), juce::dontSendNotification);
                 }
             }
         }
     }
 
 private:
-    juce::ValueTree&   tree;
+    juce::ValueTree    tree_;
     juce::Label&       label;
     juce::Identifier   property;
     juce::UndoManager* undoMgr  = nullptr;

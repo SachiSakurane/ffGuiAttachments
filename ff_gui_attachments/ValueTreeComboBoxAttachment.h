@@ -72,7 +72,7 @@ public:
      If you set \param selectSubNodes, the ComboBox will get the child nodes as options.
      The selected child node will get the property "selected" == 1.
      */
-    ValueTreeComboBoxAttachment (juce::ValueTree& attachToTree,
+    ValueTreeComboBoxAttachment (const juce::ValueTree& attachToTree,
                                  juce::Identifier indexProperty,
                                  juce::ComboBox& comboBoxToAttach,
                                  juce::UndoManager* undoManagerToUse = nullptr,
@@ -195,7 +195,7 @@ private:
         }
     }
 
-    juce::ValueTree&   tree;
+    juce::ValueTree    tree;
     juce::ComboBox&    comboBox;
     juce::Identifier   property;
     bool               selectSubNodes;

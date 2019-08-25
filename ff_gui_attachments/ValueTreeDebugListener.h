@@ -56,7 +56,7 @@ public:
      If you want to see callbacks from child trees too set @param includeChildren to true.
      @param dumpTreeLevel is not yet implemented.
      */
-    ValueTreeDebugListener (juce::ValueTree& treeToWatch, int shouldIncludeChildren=false, const int requestedDumpTreeLevel=0)
+    ValueTreeDebugListener (const juce::ValueTree& treeToWatch, int shouldIncludeChildren=false, const int requestedDumpTreeLevel=0)
       : tree (treeToWatch),
         includeChildren (shouldIncludeChildren),
         dumpTreeLevel (requestedDumpTreeLevel)
